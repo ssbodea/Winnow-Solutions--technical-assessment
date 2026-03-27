@@ -1,6 +1,6 @@
 # Video Controller Service
 
-A simple Java Spring Boot service to **control video playback** on a local machine using **VLC media player**. Designed as a prototype for automated test scenarios.
+A Java Spring Boot service to **control video playback** on a local machine using **VLC media player**. Designed as a **prototype for automated test scenarios**, such as those used for automated testing of vision systems.
 
 ---
 
@@ -10,10 +10,10 @@ A simple Java Spring Boot service to **control video playback** on a local machi
   - **Project:** Maven, **Java 17**, **Spring Boot 3.5.13**  
   - **Dependencies:** Spring Web  
   - **Package:** `com.example.videocontroller`
-- Opened in **IntelliJ Community Edition** and run **Spring Boot** from the IDE  
+- Opened in **IntelliJ Community Edition** and run Spring Boot from the IDE  
 - **VLC Media Player** used for video playback  
 - Windows environment  
-- JSON input used for file paths to avoid encoding issues  
+- JSON input used for file paths to handle spaces and encoding issues  
 
 **Screenshots of Setup:**
 
@@ -28,9 +28,9 @@ A simple Java Spring Boot service to **control video playback** on a local machi
 ## Project Files
 
 - `src/main/java/com/example/videocontroller/VideocontrollerApplication.java` — Spring Boot entry point  
-- `src/main/java/com/example/videocontroller/VideoController.java` — handles REST endpoints and VLC commands  
+- `src/main/java/com/example/videocontroller/VideoController.java` — exposes REST endpoints and executes VLC commands  
 - `src/main/resources/application.properties` — configuration for VLC path and RC port  
-- `pom.xml` — Maven dependencies for Spring Boot  
+- `pom.xml` — Maven dependencies and Spring Boot plugin  
 
 ---
 
@@ -44,20 +44,29 @@ A simple Java Spring Boot service to **control video playback** on a local machi
   - `POST /video/pause` — pauses the currently playing video  
   - `POST /video/stop` — stops playback and closes VLC  
 
-- **VLC RC interface** is used to send pause/stop commands via TCP (`vlc.rc-port=9999`)  
-- Spring Boot server runs on **port 8080**  
-- The main application class `VideocontrollerApplication.java` starts the Spring Boot server  
+- The service **launches VLC via command line** and optionally communicates via the **VLC RC interface** (`vlc.rc-port=9999`) for pause/stop functionality.  
+- Spring Boot runs the embedded **Tomcat server on port 8080**.  
+- Each endpoint uses `ProcessBuilder` to execute VLC commands.  
+
+**Design Considerations / Notes:**  
+- Only a **minimal prototype**: multiple `/play` calls may start multiple VLC instances.  
+- No `/status` endpoint implemented; could be added to track playback state.  
+- Error handling is minimal; invalid paths or failed VLC launches log exceptions but do not return detailed HTTP errors.  
+- Future improvements:  
+  - Use a **single VLC instance** with RC interface to handle multiple requests safely.  
+  - Add **debounce** or request throttling to prevent overlapping commands.  
+  - Implement `/status` endpoint for test automation to check current video state.  
 
 ---
 
 ## Running the Project
 
-- Start Spring Boot from **IntelliJ IDE** (run `VideocontrollerApplication.java`)  
-- Keep the terminal open and ready for REST calls  
+1. Start Spring Boot from **IntelliJ IDE** by running `VideocontrollerApplication.java`.  
+2. Keep the terminal open for REST calls.  
 
 ### Test Endpoints Using CMD
 
-Run the following commands sequentially in **one Command Prompt session** to demo **play → pause → stop**:
+Run the following commands in **one Command Prompt session** to demonstrate **play → pause → stop**:
 
 ```cmd
 REM Play video
@@ -67,8 +76,10 @@ curl -X POST -H "Content-Type: application/json" ^
 
 REM Pause video
 curl -X POST -H "Content-Type: application/json" ^
+     -d "{}" ^
      http://localhost:8080/video/pause
 
 REM Stop video
 curl -X POST -H "Content-Type: application/json" ^
+     -d "{}" ^
      http://localhost:8080/video/stop
